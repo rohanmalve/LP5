@@ -1,0 +1,584 @@
+// DFS--------------------------------
+
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <omp.h>
+
+#define MAX_THREADS 4
+
+using namespace std;
+
+vector<vector<int>> graph;
+vector<bool> visited;
+
+void parallelDFS(int startNode) {
+    stack<int> s;
+    s.push(startNode);
+    
+    while (!s.empty()) {
+        int node = s.top();
+        s.pop();
+        
+        if (!visited[node]) {
+            visited[node] = true;
+            
+            // Process node here...
+            cout << "Node: " << node << endl;
+            
+            // Parallelize the exploration of neighbors
+            #pragma omp parallel for num_threads(MAX_THREADS)
+            for (int neighbor : graph[node]) {
+                if (!visited[neighbor]) {
+                    #pragma omp critical
+                    {
+                        s.push(neighbor);
+                    }
+                }
+            }
+        }
+    }
+}
+
+int main() {
+    int numNodes, numEdges;
+    cout << "Enter the number of nodes and edges: ";
+    cin >> numNodes >> numEdges;
+    
+    // Initialize graph and visited array
+    graph.resize(100);
+    visited.resize(100, false);
+    
+    // Build the graph
+    cout << "Enter the edges: " << endl;
+    for (int i = 0; i < numEdges; ++i) {
+        int u, v;
+        cin >> u >> v;
+        
+        // Add edge (undirected graph)
+        graph[u].push_back(v);
+        graph[v].push_back(u);
+    }
+    
+    int startNode;
+    cout << "Enter the starting node: ";
+    cin >> startNode;
+    
+    // Perform parallel DFS
+    parallelDFS(startNode);
+    
+    return 0;
+}
+
+
+_______________________________________________________________
+
+//parallal bfs------------------------------------------------
+
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <omp.h>
+
+#define MAX_THREADS 4
+
+using namespace std;
+
+vector<vector<int>> graph;
+vector<bool> visited;
+
+void parallelBFS(int startNode) {
+    queue<int> q;
+    int level = 0;
+    
+    q.push(startNode);
+    visited[startNode] = true;
+    
+    while (!q.empty()) {
+        int qSize = q.size();
+        
+        #pragma omp parallel for num_threads(MAX_THREADS)
+        for (int i = 0; i < qSize; ++i) {
+            int node = q.front();
+            q.pop();
+            
+            // Process node here...
+            cout << "Node: " << node << ", Level: " << level << endl;
+            
+            // Enqueue unvisited neighbors
+            for (int neighbor : graph[node]) {
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    q.push(neighbor);
+                }
+            }
+        }
+        
+        level++;
+    }
+}
+
+int main() {
+    int numNodes, numEdges;
+    cout << "Enter the number of nodes and edges: ";
+    cin >> numNodes >> numEdges;
+    
+    // Initialize graph and visited array
+    graph.resize(100);
+    visited.resize(100, false);
+    
+    // Build the graph
+    cout << "Enter the edges: " << endl;
+    for (int i = 0; i < numEdges; ++i) {
+        int u, v;
+        cin >> u >> v;
+        
+        // Add edge (undirected graph)
+        graph[u].push_back(v);
+        graph[v].push_back(u);
+    }
+    
+    int startNode;
+    cout << "Enter the starting node: ";
+    cin >> startNode;
+    
+    // Perform parallel BFS
+    parallelBFS(startNode);
+    
+    return 0;
+}
+
+
+-----------------------------------------------------------------------------
+
+// parallel merge sort------------
+
+// parallel merge short
+
+#include<bits/stdc++.h>
+#include<omp.h>
+
+using namespace std;
+
+void mergesort(int a[],int i,int j);
+void merge(int a[],int i1,int j1,int i2,int j2);
+
+void mergesort(int a[],int i,int j)
+{
+	int mid;
+	if(i<j)
+	{
+    	mid=(i+j)/2;
+
+    	#pragma omp parallel sections
+    	{
+        	#pragma omp section
+        	{
+            	mergesort(a,i,mid);
+        	}
+
+        	#pragma omp section
+        	{
+            	mergesort(a,mid+1,j);
+        	}
+    	}
+
+    	merge(a,i,mid,mid+1,j);
+	}
+
+}
+
+void merge(int a[],int i1,int j1,int i2,int j2)
+{
+	int temp[1000];
+	int i,j,k;
+	i=i1;
+	j=i2;
+	k=0;
+
+	while(i<=j1 && j<=j2)
+	{
+    	if(a[i]<a[j])
+    	{
+        	temp[k++]=a[i++];
+    	}
+    	else
+    	{
+        	temp[k++]=a[j++];
+        }
+	}
+
+	while(i<=j1)
+	{
+    	temp[k++]=a[i++];
+	}
+
+	while(j<=j2)
+	{
+    	temp[k++]=a[j++];
+	}
+
+	for(i=i1,j=0;i<=j2;i++,j++)
+	{
+    	a[i]=temp[j];
+	}
+}
+
+
+
+int main(){
+    int *a, n;
+    cout<<"Enter no of ele.."<<endl;
+    cin>>n;
+    a = new int[n];
+    for(int i=0;i<n;i++){
+        cin>>a[i];
+    }
+    mergesort(a,0,n-1);
+	cout<<"\n Sorted Array is=> "<<endl;
+	for(int i=0;i<n;i++)
+	{
+    	cout<<"\n "<<a[i];
+	}
+	return 0;
+}
+
+//---------------------------------------------------------------------
+
+// parallel bubblesort
+
+
+#include<iostream>
+#include<stdlib.h>
+#include<omp.h>
+using namespace std;
+
+void bubble(int*, int);
+void swap(int&, int&);
+
+void bubble(int *a, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        int first = i % 2;
+        
+        #pragma omp parallel for shared(a, first)
+        for (int j = first; j < n - 1; j += 2)
+        {
+            if (a[j] > a[j + 1])
+            {
+                swap(a[j], a[j + 1]);
+            }
+        }
+    }
+}
+
+void swap(int& a, int& b)
+{
+    int temp;
+    temp = a;
+    a = b;
+    b = temp;
+}
+
+int main()
+{
+    int *a, n;
+    cout << "\n enter total number of elements => ";
+    cin >> n;
+    a = new int[n];
+    cout << "\n enter elements => ";
+    for (int i = 0; i < n; i++)
+    {
+        cin >> a[i];
+    }
+
+    bubble(a, n);
+
+    cout << "\n sorted array is => ";
+    for (int i = 0; i < n; i++)
+    {
+        cout << a[i] << endl;
+    }
+
+    return 0;
+}
+
+--------------------------------------
+
+// QUICK SORT
+
+#include <iostream>
+#include <omp.h>
+using namespace std;
+
+// Function to swap two elements
+void swap(int* a, int* b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+// Partitioning the array and returning the pivot index
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            swap(&arr[i], &arr[j]);
+        }
+    }
+    swap(&arr[i + 1], &arr[high]);
+    return (i + 1);
+}
+
+// Recursive function to perform Quick Sort
+void quickSort(int arr[], int low, int high) {
+    if (low < high) {
+        // Find pivot index
+        int pivot = partition(arr, low, high);
+
+        // Recursive calls on the two halves
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            {
+                quickSort(arr, low, pivot - 1);
+            }
+
+            #pragma omp section
+            {
+                quickSort(arr, pivot + 1, high);
+            }
+        }
+    }
+}
+
+// Function to print the array
+void printArray(int arr[], int size) {
+    for (int i = 0; i < size; i++)
+        cout << arr[i] << " ";
+    cout << endl;
+}
+
+int main() {
+    int n;
+    cout<<"enter no of ele..."<<endl;
+    cin>>n;
+    
+    int arr[n];
+    for(int i=0;i<n;i++){
+        cin>>arr[i];
+    }
+
+    cout << "Original array: ";
+    printArray(arr, n);
+
+    quickSort(arr, 0, n - 1);
+
+    cout << "Sorted array: ";
+    printArray(arr, n);
+
+    return 0;
+}
+
+
+//-----------------------------------------------------------------------------------
+
+// MIN MAX SUM
+
+#include <iostream>
+#include <omp.h>
+#include <climits>
+using namespace std;
+
+void min_reduction(int arr[], int n)
+{
+    int min_value = INT_MAX;
+    #pragma omp parallel for reduction(min: min_value)
+    for (int i = 0; i < n; i++)
+    {
+        if (arr[i] < min_value)
+        {
+            min_value = arr[i];
+        }
+    }
+    cout << "Minimum value: " << min_value << endl;
+}
+
+void max_reduction(int arr[], int n)
+{
+    int max_value = INT_MIN;
+    #pragma omp parallel for reduction(max: max_value)
+    for (int i = 0; i < n; i++)
+    {
+        if (arr[i] > max_value)
+        {
+            max_value = arr[i];
+        }
+    }
+    cout << "Maximum value: " << max_value << endl;
+}
+
+void sum_reduction(int arr[], int n)
+{
+    int sum = 0;
+    #pragma omp parallel for reduction(+: sum)
+    for (int i = 0; i < n; i++)
+    {
+        sum += arr[i];
+    }
+    cout << "Sum: " << sum << endl;
+}
+
+void average_reduction(int arr[], int n)
+{
+    int sum = 0;
+    #pragma omp parallel for reduction(+: sum)
+    for (int i = 0; i < n; i++)
+    {
+        sum += arr[i];
+    }
+    cout << "Average: " << (double)sum / (n-1) << endl;
+}
+
+int main()
+{
+    int *arr,n;
+    cout<<"\n Enter Total No. of Elements=> ";
+    cin>>n;
+    arr=new int[n];
+    cout<<"\n Enter Elements of Array=>"<<endl;
+    for(int i=0;i<n;i++)
+    {
+        cin>>arr[i];
+    }
+
+    min_reduction(arr, n);
+    max_reduction(arr, n);
+    sum_reduction(arr, n);
+    average_reduction(arr, n);
+}
+
+//-------------------------------------------------------
+
+
+7. MATRIX MUL 
+
+// Matrix mutable
+
+#include<bits/stdc++.h>
+#include <omp.h>
+using namespace std;
+
+void matrix_mul(int a[10][10],int b[10][10],int c[10][10],int r1,int c1,int c2){
+   #pragma omp parallel for 
+    for(int i=0; i<r1; i++){
+        for(int j =0;j<c2 ;j++){
+            c[i][j] =0;
+            for(int k=0;k<c1; k++){
+                c[i][j]+= a[i][k]*b[k][j];
+            }
+        }
+    }
+    
+    cout<<"MUL ele of c matx"<<endl;
+    for(int i=0 ;i<r1; i++){
+        for(int j =0; j<c2; j++){
+            cout<<c[i][j]<<" ";
+        }
+        cout<<"\n";
+    }
+    
+    
+}
+int main(){
+    int a[10][10],b[10][10], c[10][10], r1,c1,r2,c2;
+    
+    cout<<"Enter row and colunm for a matx";
+    cin>>r1>>c1;
+    cout<<"Enter row and colunm for b matx";
+    cin>>r2>>c2;
+    
+    cout<<"Enter ele of A matx"<<endl;
+    for(int i=0 ;i<r1; i++){
+        for(int j =0; j<c1; j++){
+            cin>>a[i][j];
+        }
+    }
+    cout<<"Enter ele of B matx"<<endl;
+    for(int i=0 ;i<r2; i++){
+        for(int j =0; j<c2; j++){
+            cin>>b[i][j];
+        }
+    }
+
+
+    if(c1==r2){
+        matrix_mul(a,b,c,r1,c1,c2);
+    }
+    else {
+        cout<<"mul not possible"<<endl;
+    }
+}
+
+-----------------------------------------------
+
+// MAT x VECTOR
+
+#include <iostream>
+#include <omp.h>
+
+const int MAX_ROWS = 10;
+const int MAX_COLS = 10;
+
+void matrixVectorMultiplication(int matrix[MAX_ROWS][MAX_COLS], int vector[MAX_COLS], int result[MAX_ROWS], int rows, int cols) {
+    #pragma omp parallel for
+    for (int i = 0; i < rows; ++i) {
+        result[i] = 0;
+        for (int j = 0; j < cols; ++j) {
+            result[i] += matrix[i][j] * vector[j];
+        }
+    }
+}
+
+int main() {
+    int matrix[MAX_ROWS][MAX_COLS];
+    int vector[MAX_COLS];
+    int result[MAX_ROWS];
+    int rows, cols;
+
+    // Read matrix dimensions
+    std::cout << "Enter the number of rows in the matrix: ";
+    std::cin >> rows;
+    std::cout << "Enter the number of columns in the matrix: ";
+    std::cin >> cols;
+
+    // Read matrix elements
+    std::cout << "Enter the elements of the matrix: \n";
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            std::cin >> matrix[i][j];
+        }
+    }
+
+    // Read vector elements
+    std::cout << "Enter the elements of the vector: \n";
+    for (int i = 0; i < cols; ++i) {
+        std::cin >> vector[i];
+    }
+
+    // Perform matrix-vector multiplication
+    matrixVectorMultiplication(matrix, vector, result, rows, cols);
+
+    // Display the result
+    std::cout << "Result: ";
+    for (int i = 0; i < rows; ++i) {
+        std::cout << result[i] << " ";
+    }
+    std::cout << std::endl;
+
+    return 0;
+}
